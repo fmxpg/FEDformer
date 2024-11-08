@@ -1,5 +1,7 @@
 export CUDA_VISIBLE_DEVICES=0
 
+cd ..
+
 for model in FEDformer Autoformer Informer Transformer
 do
 
