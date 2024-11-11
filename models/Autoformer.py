@@ -44,7 +44,7 @@ class Model(nn.Module):
                 EncoderLayer(
                     AutoCorrelationLayer(
                         AutoCorrelation(False, configs.factor, attention_dropout=configs.dropout,
-                                        output_attention=configs.output_attention),
+                                        output_attention=configs.output_attention, configs=configs),
                         configs.d_model, configs.n_heads),
                     configs.d_model,
                     configs.d_ff,
@@ -61,11 +61,11 @@ class Model(nn.Module):
                 DecoderLayer(
                     AutoCorrelationLayer(
                         AutoCorrelation(True, configs.factor, attention_dropout=configs.dropout,
-                                        output_attention=False),
+                                        output_attention=False, configs=configs),
                         configs.d_model, configs.n_heads),
                     AutoCorrelationLayer(
                         AutoCorrelation(False, configs.factor, attention_dropout=configs.dropout,
-                                        output_attention=False),
+                                        output_attention=False, configs=configs),
                         configs.d_model, configs.n_heads),
                     configs.d_model,
                     configs.c_out,
