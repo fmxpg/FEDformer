@@ -2,5 +2,6 @@
 /dataset/
 /checkpoints/
 /results/
+/test_results/
 
 /result.txt

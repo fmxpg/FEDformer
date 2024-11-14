@@ -100,6 +100,7 @@ class Exp_Main(Exp_Basic):
         model_optim = self._select_optimizer()
         criterion = self._select_criterion()
 
+        scaler = None
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
@@ -154,7 +155,7 @@ class Exp_Main(Exp_Basic):
                     iter_count = 0
                     time_now = time.time()
 
-                if self.args.use_amp:
+                if scaler is not None:
                     scaler.scale(loss).backward()
                     scaler.step(model_optim)
                     scaler.update()
