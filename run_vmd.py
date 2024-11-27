@@ -1,14 +1,14 @@
 import argparse
-import os
-import sys
 import torch
-from exp.exp_main import Exp_Main
 import random
 import numpy as np
 
+from exp.exp_main import Exp_Main
+from utils.vmd import vmd
+
 
 def main():
-    fix_seed = 2021
+    fix_seed = 2024
     random.seed(fix_seed)
     torch.manual_seed(fix_seed)
     np.random.seed(fix_seed)
@@ -91,6 +91,9 @@ def main():
     parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
     parser.add_argument('--devices', type=str, default='0,1', help='device ids of multi gpus')
 
+    # VMD
+    parser.add_argument('--vmd_k', type=int, default=8, help='vmd k')
+
     args = parser.parse_args()
 
     args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
@@ -100,11 +103,6 @@ def main():
         device_ids = args.devices.split(',')
         args.device_ids = [int(id_) for id_ in device_ids]
         args.gpu = args.device_ids[0]
-
-    print('Args in experiment:')
-    print(args)
-
-    Exp = Exp_Main
 
     if args.is_training:
         for ii in range(args.itr):
@@ -130,7 +128,7 @@ def main():
                 args.des,
                 ii)
 
-            exp = Exp(args)  # set experiments
+            exp = Exp_Main(args)  # set experiments
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
             exp.train(setting)
 
@@ -142,34 +140,80 @@ def main():
                 exp.predict(setting, True)
 
             torch.cuda.empty_cache()
-    else:
-        ii = 0
-        # setting record of experiments
-        setting = '{}_{}_{}_modes{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
-            args.task_id,
-            args.model,
-            args.mode_select,
-            args.modes,
-            args.data,
-            args.features,
-            args.seq_len,
-            args.label_len,
-            args.pred_len,
-            args.d_model,
-            args.n_heads,
-            args.e_layers,
-            args.d_layers,
-            args.d_ff,
-            args.factor,
-            args.embed,
-            args.distil,
-            args.des,
-            ii)
 
-        exp = Exp(args)  # set experiments
-        print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.test(setting, test=1)
-        torch.cuda.empty_cache()
+        vmd(args.root_path, args.data_path, args.target, k=args.vmd_k)
+        assert args.data_path.endswith('.csv')
+        args.data_path = args.data_path[:-4] + '_' + args.target + '_vmd.csv'
+
+        task_id = args.task_id
+        target = args.target
+        for i in range(args.vmd_k):
+            args.task_id = task_id + '_vmd_' + str(i)
+            args.target = target + '_' + str(i)
+            for ii in range(args.itr):
+                # setting record of experiments
+                setting = '{}_{}_{}_modes{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+                    args.task_id,
+                    args.model,
+                    args.mode_select,
+                    args.modes,
+                    args.data,
+                    args.features,
+                    args.seq_len,
+                    args.label_len,
+                    args.pred_len,
+                    args.d_model,
+                    args.n_heads,
+                    args.e_layers,
+                    args.d_layers,
+                    args.d_ff,
+                    args.factor,
+                    args.embed,
+                    args.distil,
+                    args.des,
+                    ii)
+
+                exp = Exp_Main(args)  # set experiments
+                print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
+                exp.train(setting)
+
+                print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+                exp.test(setting)
+
+                if args.do_predict:
+                    print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+                    exp.predict(setting, True)
+
+                torch.cuda.empty_cache()
+    else:
+        # ii = 0
+        # # setting record of experiments
+        # setting = '{}_{}_{}_modes{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+        #     args.task_id,
+        #     args.model,
+        #     args.mode_select,
+        #     args.modes,
+        #     args.data,
+        #     args.features,
+        #     args.seq_len,
+        #     args.label_len,
+        #     args.pred_len,
+        #     args.d_model,
+        #     args.n_heads,
+        #     args.e_layers,
+        #     args.d_layers,
+        #     args.d_ff,
+        #     args.factor,
+        #     args.embed,
+        #     args.distil,
+        #     args.des,
+        #     ii)
+        #
+        # exp = Exp_Main(args)  # set experiments
+        # print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+        # exp.test(setting, test=1)
+        # torch.cuda.empty_cache()
+        pass
 
 
 if __name__ == "__main__":
