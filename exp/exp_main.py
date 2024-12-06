@@ -182,14 +182,14 @@ class Exp_Main(Exp_Basic):
 
         return self.model
 
-    def test(self, setting, test=0):
+    def test(self, setting, load=False, inverse=False):
         test_data, test_loader = self._get_data(flag='test')
-        if test:
+        if load:
             print('loading model')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth')))
 
-        preds = []
-        trues = []
+        preds_ori = []
+        trues_ori = []
         folder_path = './test_results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
@@ -226,22 +226,26 @@ class Exp_Main(Exp_Basic):
                 outputs = outputs.detach().cpu().numpy()
                 batch_y = batch_y.detach().cpu().numpy()
 
+                if inverse:
+                    outputs = test_data.inverse_transform(outputs.reshape(-1, 1)).reshape(outputs.shape)
+                    batch_y = test_data.inverse_transform(batch_y.reshape(-1, 1)).reshape(batch_y.shape)
+
                 pred = outputs  # outputs.detach().cpu().numpy()  # .squeeze()
                 true = batch_y  # batch_y.detach().cpu().numpy()  # .squeeze()
 
-                preds.append(pred)
-                trues.append(true)
+                preds_ori.append(pred)
+                trues_ori.append(true)
                 if i % 20 == 0:
                     input = batch_x.detach().cpu().numpy()
                     gt = np.concatenate((input[0, :, -1], true[0, :, -1]), axis=0)
                     pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
                     visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
 
-        preds = np.array(preds)
-        trues = np.array(trues)
-        print('test shape:', preds.shape, trues.shape)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-        trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        preds_ori = np.array(preds_ori)
+        trues_ori = np.array(trues_ori)
+        print('test shape:', preds_ori.shape, trues_ori.shape)
+        preds = preds_ori.reshape(-1, preds_ori.shape[-2], preds_ori.shape[-1])
+        trues = trues_ori.reshape(-1, trues_ori.shape[-2], trues_ori.shape[-1])
         print('test shape:', preds.shape, trues.shape)
 
         # result save
@@ -262,7 +266,7 @@ class Exp_Main(Exp_Basic):
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
 
-        return preds, trues
+        return preds_ori, trues_ori
 
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')

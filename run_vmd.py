@@ -1,9 +1,12 @@
 import argparse
+from copy import deepcopy
+
 import torch
 import random
 import numpy as np
 
 from exp.exp_main import Exp_Main
+from exp.exp_vmd import Exp_Vmd
 from utils.vmd import vmd
 
 
@@ -128,12 +131,9 @@ def main():
                 args.des,
                 ii)
 
-            exp = Exp_Main(args)  # set experiments
+            exp = Exp_Main(deepcopy(args))  # set experiments
             print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
             exp.train(setting)
-
-            print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-            exp.test(setting)
 
             if args.do_predict:
                 print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
@@ -173,12 +173,9 @@ def main():
                     args.des,
                     ii)
 
-                exp = Exp_Main(args)  # set experiments
+                exp = Exp_Main(deepcopy(args))  # set experiments
                 print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
                 exp.train(setting)
-
-                print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-                exp.test(setting)
 
                 if args.do_predict:
                     print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
@@ -186,34 +183,89 @@ def main():
 
                 torch.cuda.empty_cache()
     else:
-        # ii = 0
-        # # setting record of experiments
-        # setting = '{}_{}_{}_modes{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
-        #     args.task_id,
-        #     args.model,
-        #     args.mode_select,
-        #     args.modes,
-        #     args.data,
-        #     args.features,
-        #     args.seq_len,
-        #     args.label_len,
-        #     args.pred_len,
-        #     args.d_model,
-        #     args.n_heads,
-        #     args.e_layers,
-        #     args.d_layers,
-        #     args.d_ff,
-        #     args.factor,
-        #     args.embed,
-        #     args.distil,
-        #     args.des,
-        #     ii)
-        #
-        # exp = Exp_Main(args)  # set experiments
-        # print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        # exp.test(setting, test=1)
-        # torch.cuda.empty_cache()
-        pass
+        ii = 0
+        # setting record of experiments
+        setting0 = '{}_{}_{}_modes{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+            args.task_id,
+            args.model,
+            args.mode_select,
+            args.modes,
+            args.data,
+            args.features,
+            args.seq_len,
+            args.label_len,
+            args.pred_len,
+            args.d_model,
+            args.n_heads,
+            args.e_layers,
+            args.d_layers,
+            args.d_ff,
+            args.factor,
+            args.embed,
+            args.distil,
+            args.des,
+            ii)
+
+        exp0 = Exp_Main(deepcopy(args))
+        exps = []
+
+        assert args.data_path.endswith('.csv')
+        args.data_path = args.data_path[:-4] + '_' + args.target + '_vmd.csv'
+
+        task_id = args.task_id
+        target = args.target
+        settings = []
+        for i in range(args.vmd_k):
+            args.task_id = task_id + '_vmd_' + str(i)
+            args.target = target + '_' + str(i)
+
+            settings.append('{}_{}_{}_modes{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+                args.task_id,
+                args.model,
+                args.mode_select,
+                args.modes,
+                args.data,
+                args.features,
+                args.seq_len,
+                args.label_len,
+                args.pred_len,
+                args.d_model,
+                args.n_heads,
+                args.e_layers,
+                args.d_layers,
+                args.d_ff,
+                args.factor,
+                args.embed,
+                args.distil,
+                args.des,
+                ii))
+            exps.append(Exp_Main(deepcopy(args)))
+
+        vmd_setting = '{}_{}_{}_modes{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_fc{}_eb{}_dt{}_{}_{}'.format(
+            task_id + '_vmd',
+            args.model,
+            args.mode_select,
+            args.modes,
+            args.data,
+            args.features,
+            args.seq_len,
+            args.label_len,
+            args.pred_len,
+            args.d_model,
+            args.n_heads,
+            args.e_layers,
+            args.d_layers,
+            args.d_ff,
+            args.factor,
+            args.embed,
+            args.distil,
+            args.des,
+            ii)
+
+        print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(vmd_setting))
+        exp = Exp_Vmd(exp0, exps)
+        exp.test(setting0, settings, vmd_setting)
+        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

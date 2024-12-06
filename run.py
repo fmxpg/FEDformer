@@ -168,7 +168,7 @@ def main():
 
         exp = Exp(args)  # set experiments
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.test(setting, test=1)
+        exp.test(setting, load=True)
         torch.cuda.empty_cache()
 
 
